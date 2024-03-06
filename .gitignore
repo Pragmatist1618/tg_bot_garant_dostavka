@@ -1,4 +1,4 @@
 *.log
 settings.py
 .env
-.idea
+.idea!/settings.py
