@@ -1,130 +1,111 @@
+import os
+from django.core.wsgi import get_wsgi_application
+from settings import API_TG, managers
+
+# Установка переменной окружения для настройки Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tg_bot_garant_dostavka.settings')
+
+# Загрузка Django приложения
+application = get_wsgi_application()
+
 import telebot
-import sqlite3
+from orders.models import Car
 
-# Установка токена вашего бота
-TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
-
-# Создание экземпляра бота
-bot = telebot.TeleBot(TOKEN)
-
-# Создание или подключение к базе данных SQLite
-conn = sqlite3.connect('orders.db')
-cursor = conn.cursor()
-
-# Создание таблицы для хранения заказов, если она ещё не существует
-cursor.execute('''CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                car_type TEXT,
-                expedited_cargo TEXT,
-                unload_in_tc TEXT,
-                unload_places INTEGER,
-                work_hours TEXT,
-                mileage_km INTEGER,
-                contact_info TEXT)''')
-conn.commit()
+# Создаем бота
+bot = telebot.TeleBot(API_TG)
 
 
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! Я бот для оформления заказов на доставку товаров. "
-                          "Для начала работы нажмите /order.")
+    bot.reply_to(message, "Приветствие, краткие пояснения")
 
 
-# Обработчик команды /order
+# Обработчик выбора типа автомобиля
 @bot.message_handler(commands=['order'])
-def start_order(message):
-    chat_id = message.chat.id
-    bot.send_message(chat_id, "Давайте начнем оформление заказа.\n"
-                              "Выберите тип автомобиля (Грузовик, Фургон, Пикап):")
-    bot.register_next_step_handler(message, get_car_type)
+def handle_type(message):
+    bot.reply_to(message, "Экспедирование груза (Да/Нет)")
 
 
-# Функция для получения типа автомобиля
-def get_car_type(message):
-    chat_id = message.chat.id
-    car_type = message.text
-
-    bot.send_message(chat_id, "Спасибо! Вы выбрали {}.".format(car_type))
-    bot.send_message(chat_id, "Вопрос1: Экспедирование груза (Да/Нет):")
-    bot.register_next_step_handler(message, get_expedited_cargo, car_type)
-
-
-# Функция для получения информации об экспедировании груза
-def get_expedited_cargo(message, car_type):
-    chat_id = message.chat.id
-    expedited_cargo = message.text.lower()
-
-    bot.send_message(chat_id, "Вопрос2: Выгрузка в ТК с оформлением от 1 до 10 городов (Да/Нет):")
-    bot.register_next_step_handler(message, get_unload_in_tc, car_type, expedited_cargo)
-
-
-# Функция для получения информации о выгрузке в транспортной компании
-def get_unload_in_tc(message, car_type, expedited_cargo):
-    chat_id = message.chat.id
-    unload_in_tc = message.text.lower()
-
-    if unload_in_tc == 'да':
-        bot.send_message(chat_id, "Спасибо! Укажите количество городов для оформления:")
-        bot.register_next_step_handler(message, get_unload_places, car_type, expedited_cargo, unload_in_tc)
+# Обработчик ответа на вопрос об экспедировании груза
+@bot.message_handler(func=lambda message: True)
+def handle_expedited_cargo(message):
+    if message.text.lower() == "да":
+        expedited_cargo = True
     else:
-        bot.send_message(chat_id, "Вопрос3: Кол-во мест выгрузки автомобиля (1,2,3,4,5):")
-        bot.register_next_step_handler(message, get_unload_places, car_type, expedited_cargo, unload_in_tc)
+        expedited_cargo = False
+    bot.reply_to(message, "Выгрузка в ТК с оформлением от 1 до 10 городов (Да/Нет)")
+    bot.register_next_step_handler(message, handle_unloading_in_transport_company, expedited_cargo)
 
 
-# Функция для получения количества мест выгрузки автомобиля
-def get_unload_places(message, car_type, expedited_cargo, unload_in_tc):
-    chat_id = message.chat.id
-    unload_places = message.text
-
-    bot.send_message(chat_id, "Спасибо! Теперь укажите количество часов работы автомобиля или "
-                              "ориентировочное время работы (например, с 9:00 до 12:00):")
-    bot.register_next_step_handler(message, get_work_hours, car_type, expedited_cargo, unload_in_tc, unload_places)
-
-
-# Функция для получения информации о времени работы автомобиля
-def get_work_hours(message, car_type, expedited_cargo, unload_in_tc, unload_places):
-    chat_id = message.chat.id
-    work_hours = message.text
-
-    bot.send_message(chat_id, "Укажите количество пробега за МКАД (км):")
-    bot.register_next_step_handler(message, get_mileage_km, car_type, expedited_cargo, unload_in_tc,
-                                   unload_places, work_hours)
+# Обработчик ответа на вопрос о выгрузке в ТК
+def handle_unloading_in_transport_company(message, expedited_cargo):
+    if message.text.lower() == "да":
+        unloading_in_transport_company = True
+    else:
+        unloading_in_transport_company = False
+    bot.reply_to(message, "Кол-во мест выгрузки автомобиля (1,2,3,4,5)")
+    bot.register_next_step_handler(message, handle_number_of_unloading_places, expedited_cargo,
+                                   unloading_in_transport_company)
 
 
-# Функция для получения информации о пробеге за МКАД
-def get_mileage_km(message, car_type, expedited_cargo, unload_in_tc, unload_places, work_hours):
-    chat_id = message.chat.id
-    mileage_km = message.text
-
-    bot.send_message(chat_id, "Введите свои контактные данные:")
-    bot.register_next_step_handler(message, get_contact_info, car_type, expedited_cargo, unload_in_tc,
-                                   unload_places, work_hours, mileage_km)
+# Обработчик ответа на вопрос о количестве мест выгрузки
+def handle_number_of_unloading_places(message, expedited_cargo, unloading_in_transport_company):
+    number_of_unloading_places = int(message.text)
+    bot.reply_to(message, "Количество часов работы автомобиля или ориентировочное время работы")
+    bot.register_next_step_handler(message, handle_hours_of_work, expedited_cargo, unloading_in_transport_company,
+                                   number_of_unloading_places)
 
 
-# Функция для получения контактной информации и завершения заказа
-def get_contact_info(message, car_type, expedited_cargo, unload_in_tc, unload_places, work_hours, mileage_km):
-    chat_id = message.chat.id
+# Обработчик ответа на вопрос о количестве часов работы
+def handle_hours_of_work(message, expedited_cargo, unloading_in_transport_company, number_of_unloading_places):
+    hours_of_work = message.text
+    bot.reply_to(message, "Количество пробега за МКАД (км)")
+    bot.register_next_step_handler(message, handle_mileage_outside_mkad, expedited_cargo,
+                                   unloading_in_transport_company, number_of_unloading_places, hours_of_work)
+
+
+# Обработчик ответа на вопрос о пробеге за МКАД
+def handle_mileage_outside_mkad(message, expedited_cargo, unloading_in_transport_company, number_of_unloading_places,
+                                hours_of_work):
+    mileage_outside_mkad = int(message.text)
+    bot.reply_to(message, "Введите ваши контактные данные")
+    bot.register_next_step_handler(message, handle_contact_info, expedited_cargo, unloading_in_transport_company,
+                                   number_of_unloading_places, hours_of_work, mileage_outside_mkad)
+
+
+# Обработчик ввода контактных данных
+def handle_contact_info(message, expedited_cargo, unloading_in_transport_company, number_of_unloading_places,
+                        hours_of_work, mileage_outside_mkad):
     contact_info = message.text
+    # Создаем объект Car и сохраняем его в базе данных
+    car = Car.objects.create(
+        type=message.text,
+        expedited_cargo=expedited_cargo,
+        unloading_in_transport_company=unloading_in_transport_company,
+        number_of_unloading_places=number_of_unloading_places,
+        hours_of_work=hours_of_work,
+        mileage_outside_mkad=mileage_outside_mkad,
+        contact_info=contact_info
+    )
 
-    # Записываем данные заказа в базу данных
-    cursor.execute('''INSERT INTO orders (car_type, expedited_cargo, unload_in_tc, unload_places,
-                      work_hours, mileage_km, contact_info) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?)''', (car_type, expedited_cargo, unload_in_tc,
-                                                        unload_places, work_hours, mileage_km, contact_info))
-    conn.commit()
+    # Отправляем уведомления менеджерам
+    for manager in managers:
+        bot.send_message(manager, f"Новый заказ:\n{car}")
 
-    # Отправляем уведомление менеджерам о новом заказе
-    send_notification_to_managers()
+    body = '{message}\n' \
+           '--\n' \
+           '{first}, {last}\n' \
+           '{username}, {id}'.format(message=message.text, first=message.from_user.first_name,
+                                     last=message.from_user.last_name, username=message.from_user.username,
+                                     id=message.chat.id)
+    # Открываем файл для записи (если файл не существует, он будет создан)
+    with open('orders.log', 'a') as file:
+        # Записываем содержимое переменной body в файл
+        file.write(body + '\n')
 
-    bot.send_message(chat_id, "Ваш заказ принят. Мы свяжемся с вами в ближайшее время.")
+    bot.reply_to(message, "Спасибо! Ваш заказ принят.")
 
 
-# Функция для отправки уведомления менеджерам о новом заказе
-def send_notification_to_managers():
-    # Здесь можно добавить логику отправки уведомления менеджерам
-    pass
-
-
-# Запуск бота
+# Запускаем бота
 bot.polling()
