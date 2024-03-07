@@ -47,5 +47,11 @@ keyboard_offloading_10.add(types.InlineKeyboardButton("1", callback_data="offloa
                            types.InlineKeyboardButton("Назад", callback_data="back"),
                            types.InlineKeyboardButton("Главное меню", callback_data="main_menu"))
 
+keyboard_time = types.InlineKeyboardMarkup(row_width=4)
+hours_buttons = [types.InlineKeyboardButton(str(i), callback_data='time_' + str(i)) for i in range(1, 25)]
+keyboard_time.add(*hours_buttons)
+keyboard_time.add(types.InlineKeyboardButton("Назад", callback_data="back"),
+                           types.InlineKeyboardButton("Главное меню", callback_data="main_menu"))
+
 keyboard_back = types.InlineKeyboardMarkup()
 keyboard_back.add(types.InlineKeyboardButton("Назад", callback_data="back"))
