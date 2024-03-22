@@ -1,15 +1,18 @@
 from django.db import models
 
 
-class Car(models.Model):
-    type = models.CharField(max_length=100, verbose_name='Тип автомобиля')
-    expedited_cargo = models.BooleanField(verbose_name='Экспедирование груза')
-    unloading_in_transport_company = models.BooleanField(verbose_name='Выгрузка в ТК с оформлением')
-    number_of_unloading_places = models.IntegerField(verbose_name='Количество мест выгрузки')
-    hours_of_work = models.CharField(max_length=100, verbose_name='Часы работы')
-    mileage_outside_mkad = models.IntegerField(verbose_name='Пробег за МКАД')
-    contact_info = models.CharField(max_length=100, verbose_name='Контактная информация')
+class Order(models.Model):
+    car_type = models.CharField(max_length=100, verbose_name='Тип автомобиля')
+    forwarding = models.BooleanField(verbose_name='Экспедирование груза')
+    is_offloading = models.BooleanField(verbose_name='Выгрузка в ТК с оформлением')
+    offloading = models.IntegerField(verbose_name='Количество мест выгрузки')
+    time = models.CharField(max_length=100, verbose_name='Часы работы')
+    distance = models.IntegerField(verbose_name='Пробег за МКАД')
+    cost = models.IntegerField(verbose_name='Итоговая стоимость')
+    contact_information = models.CharField(max_length=100, verbose_name='Контактная информация')
+    tg_id = models.CharField(max_length=100, verbose_name='ID Telegram пользователя')
+    tg_username = models.CharField(max_length=100, verbose_name='Имя пользователя в Telegram')
 
     class Meta:
-        verbose_name = 'Автомобиль'
-        verbose_name_plural = 'Автомобили'
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'

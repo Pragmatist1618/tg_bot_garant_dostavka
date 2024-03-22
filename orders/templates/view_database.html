@@ -5,39 +5,107 @@
     <title>View Database</title>
     <!-- Подключение файлов Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        #MyTable {
+            border-style: solid;
+            border-color: black;
+            border-width: 2px
+        }
+
+        #MyTable td {
+            border-style: solid;
+            border-color: black;
+            border-width: 1px;
+            padding: 3px;
+        }
+
+        .CellWithComment {
+            position: relative;
+        }
+
+        .CellComment {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            border: 1px;
+            background-color: white;
+            border-style: solid;
+            border-width: 1px;
+            border-color: black;
+            padding: 3px;
+            color: black;
+            top: 20px;
+            left: 20px;
+            width: 150px;
+        }
+
+        .CellWithComment:hover span.CellComment {
+            display: block;
+        }
+    </style>
 </head>
 <body>
+{% load filters %}
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container">
-        <h1 class="mt-5">Car Database</h1>
-        <table class="table mt-3">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Expedited Cargo</th>
-                    <th>Unloading in Transport Company</th>
-                    <th>Number of Unloading Places</th>
-                    <th>Hours of Work</th>
-                    <th>Mileage outside MKAD</th>
-                    <th>Contact Info</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for car in cars %}
-                <tr>
-                    <td>{{ car.type }}</td>
-                    <td>{{ car.expedited_cargo }}</td>
-                    <td>{{ car.unloading_in_transport_company }}</td>
-                    <td>{{ car.number_of_unloading_places }}</td>
-                    <td>{{ car.hours_of_work }}</td>
-                    <td>{{ car.mileage_outside_mkad }}</td>
-                    <td>{{ car.contact_info }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+       <a class="nav-link" href="/admin/orders/order/">Admin</a>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}?next={% url 'login' %}">Выйти</a>
+                </li>
+            </ul>
+        </div>
     </div>
-    <!-- Подключение скриптов Bootstrap и jQuery -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</nav>
+
+<div class="container">
+    <h1 class="mt-5">Order Database</h1>
+    <table class="table mt-3">
+        <thead>
+        <tr>
+            <th>№ п/п</th>
+            <th>Тип машины</th>
+            <th>Экспедирование груза</th>
+            <th>Выгрузка в ТК</th>
+            <th>Кол-во мест выгрузки</th>
+            <th>Часы работы</th>
+            <th>Пробег за МКАД</th>
+            <th>Итоговая стоимость</th>
+            <th>Контактная информация</th>
+            <th>Имя пользователя в Telegram</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for order in orders %}
+        <tr>
+            <td>{{ order.id }}</td>
+            <td class="CellWithComment">
+                {{ order.car_type|short_car_type }}
+                <span class="CellComment">{{ order.car_type }}</span>
+            </td>
+            <td>{{ order.forwarding|bool_to_text }}</td>
+            <td>{{ order.is_offloading|bool_to_text }}</td>
+            <td>{{ order.offloading }}</td>
+            <td>{{ order.time }}</td>
+            <td>{{ order.distance }}</td>
+            <td>{{ order.cost|format_price }}</td>
+            <td class="CellWithComment">
+                {{ order.contact_information|contact_info }}
+                <span class="CellComment">{{ order.contact_information }}</span>
+            </td>
+            <td>{{ order.tg_username }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Подключение скриптов Bootstrap и jQuery -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 </body>
 </html>

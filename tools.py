@@ -6,13 +6,16 @@ import requests
 
 from django.core.wsgi import get_wsgi_application
 
-from settings import TOKEN_TG
+import datetime
+
+from message import offloading_list, car_type_list
+from settings import TOKEN_TG, managers
 
 # Установка переменной окружения для настройки Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tg_bot_garant_dostavka.settings')
 # Загрузка Django приложения
 application = get_wsgi_application()
-from orders.models import Car
+from orders.models import Order
 
 message_dl = {}
 
@@ -107,5 +110,59 @@ def log_input(call, value_list):
     print(value_list)
 
 
-def save_order(value_list):
-    pass
+def log_errors(exception, log_file='errors.log'):
+    """
+    Функция для логирования ошибок в файл .log с указанием времени
+
+    :param exception: Исключение, которое было поймано
+    :param log_file: Имя файла для логирования, по умолчанию 'errors.log'
+    """
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_file, 'a') as f:
+        f.write(f"[{current_time}] {str(exception)}\n")
+
+
+def save_order(value_list, bot):
+    print(value_list)
+
+    car_type = car_type_list[int(value_list['car']) - 1]
+    forwarding = value_list['forwarding']
+    is_offloading = value_list['is_offloading']
+    offloading = value_list['offloading']
+    time = value_list['time']
+    distance = value_list['distance']
+    cost = value_list['cost']
+    contact_information = value_list['contact_information']
+    tg_id = value_list['tg_id']
+    tg_username = value_list['tg_username']
+    # print(car_type, forwarding, is_offloading, offloading, time, distance, cost, contact_information, tg_id,
+    #        tg_username)
+
+    # Создаем объект Order и сохраняем его в базе данных
+    car = Order.objects.create(
+        car_type=car_type,
+        forwarding=forwarding,
+        is_offloading=is_offloading,
+        offloading=offloading,
+        time=time,
+        distance=distance,
+        cost=cost,
+        contact_information=contact_information,
+        tg_id=tg_id,
+        tg_username=tg_username
+    )
+    #
+    # Отправляем уведомления менеджерам
+    for manager in managers:
+        bot.send_message(manager, f"Новый заказ:\n{car}")
+#
+#     body = '{message}\n' \
+#            '--\n' \
+#            '{first}, {last}\n' \
+#            '{username}, {id}'.format(message=message.text, first=message.from_user.first_name,
+#                                      last=message.from_user.last_name, username=message.from_user.username,
+#                                      id=message.chat.id)
+#     # Открываем файл для записи (если файл не существует, он будет создан)
+#     with open('orders.log', 'a') as file:
+#         # Записываем содержимое переменной body в файл
+#         file.write(body + '\n')

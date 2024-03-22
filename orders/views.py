@@ -1,7 +1,9 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from .models import Car
+from .models import Order
 
 
+@login_required
 def view_database(request):
-    cars = Car.objects.all()
-    return render(request, 'view_database.html', {'cars': cars})
+    orders = Order.objects.all()
+    return render(request, 'view_database.html', {'orders': orders})
